@@ -45,5 +45,7 @@ jobs:
       - run: yarn build
 
       - run: yarn lint
+        env:
+          TS_NODE_PROJECT: tsconfig.json
 
       - run: yarn test
