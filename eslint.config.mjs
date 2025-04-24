@@ -17,8 +17,13 @@ export default tseslint.config(
         tsconfigRootDir: String(import.meta.dirname),
       },
     },
-  },
-  {
+    settings: {
+      "import/resolver": {
+        typescript: {
+          project: ["./tsconfig.json"],
+        },
+      },
+    },
     rules: {
       "@typescript-eslint/restrict-template-expressions": "off",
       "@typescript-eslint/strict-boolean-expressions": "off",
