@@ -1,5 +1,8 @@
 import foxglove from "@foxglove/eslint-plugin"
+import * as process from "node:process"
 import * as tseslint from "typescript-eslint"
+
+delete process.env.TS_NODE_PROJECT
 
 export default tseslint.config(
   ...foxglove.configs.base,
@@ -15,13 +18,6 @@ export default tseslint.config(
           allowDefaultProject: ["eslint.config.mjs"],
         },
         tsconfigRootDir: String(import.meta.dirname),
-      },
-    },
-    settings: {
-      "import/resolver": {
-        typescript: {
-          project: ["./tsconfig.json"],
-        },
       },
     },
     rules: {
