@@ -1,12 +1,8 @@
-name: vizdiff.io CI
+name: CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build-and-test:
