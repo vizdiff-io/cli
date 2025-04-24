@@ -1,0 +1,45 @@
+name: Release
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - run: corepack enable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: yarn
+
+      - run: yarn install --immutable --immutable-cache
+
+      - run: yarn dedupe --check
+
+      - run: yarn build
+
+      - run: yarn lint
+        env:
+          TS_NODE_PROJECT: tsconfig.json
+
+      - run: yarn test
+
+      - run: npm audit signatures
+
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npx semantic-release
