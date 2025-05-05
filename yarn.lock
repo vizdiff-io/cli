@@ -1262,12 +1262,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:22.15.0":
-  version: 22.15.0
-  resolution: "@types/node@npm:22.15.0"
+"@types/node@npm:22.15.8":
+  version: 22.15.8
+  resolution: "@types/node@npm:22.15.8"
   dependencies:
     undici-types: "npm:~6.21.0"
-  checksum: 10c0/f60c716f473ec7cbb6fffd8488d29a9ea697f4f5d71c1ebca72e17cdce1c7df054c295122a2589463c44490d875f485f9251ada3c3167bdbe4fbe8a677059780
+  checksum: 10c0/980ddda0c98ce53689d52e8c20fbc7f7a42280780c4617892872c3bc2c342ef7b0bae5ff41eec536981a7d39fd7a9af71f5ce8849b36a2084d3945b7bc438d05
   languageName: node
   linkType: hard
 
@@ -1477,7 +1477,7 @@ __metadata:
   dependencies:
     "@foxglove/eslint-plugin": "npm:2.0.0"
     "@semantic-release/changelog": "npm:6.0.3"
-    "@types/node": "npm:22.15.0"
+    "@types/node": "npm:22.15.8"
     "@typescript-eslint/eslint-plugin": "npm:8.31.0"
     "@typescript-eslint/parser": "npm:8.31.0"
     commander: "npm:13.1.0"
