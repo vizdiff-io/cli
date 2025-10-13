@@ -65,7 +65,7 @@
     "@foxglove/eslint-plugin": "2.0.0",
     "@semantic-release/changelog": "6.0.3",
     "@types/node": "22.15.0",
-    "@typescript-eslint/eslint-plugin": "8.31.0",
+    "@typescript-eslint/eslint-plugin": "8.46.1",
     "@typescript-eslint/parser": "8.31.0",
     "eslint": "9.25.1",
     "eslint-config-prettier": "10.1.2",
