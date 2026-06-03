@@ -6,6 +6,7 @@ import path from "path"
 import { simpleGit } from "simple-git"
 
 import { checkToken, uploadStorybook } from ".."
+import { type CiMetadata, detectCiMetadata } from "../ci-env"
 import { fatal } from "../log"
 
 type CommandArgs = {
@@ -34,7 +35,7 @@ function main(): void {
       "--base-commit <base-commit-sha>",
       "Base commit SHA for comparison (defaults to the merge base commit)",
     )
-    .option("--pr <pr-number>", "GitHub pull request number associated with this commit (optional)")
+    .option("--pr <pr-number>", "Pull/merge request number associated with this commit (optional)")
     .action((storybookDir: string, options: CommandArgs) => {
       vizdiff(storybookDir, options).catch(fatal)
     })
@@ -48,14 +49,19 @@ function main(): void {
 }
 
 async function vizdiff(storybookDir: string, options: CommandArgs): Promise<void> {
+  // Metadata resolution precedence: explicit flags > CI env vars > local git.
+  const ci = detectCiMetadata()
+
   const projectToken = getToken(options)
-  const commitSha = await getCommitSha(storybookDir, options)
-  const branch = await getBranch(storybookDir, options)
+  const commitSha = await getCommitSha(storybookDir, options, ci)
+  const branch = await getBranch(storybookDir, options, ci)
+  const baseBranchHint = options.baseBranch ?? ci.baseBranch
+  const baseCommitHint = options.baseCommit ?? ci.baseCommitSha
   const [baseCommitSha, baseBranch] =
-    options.baseCommit && options.baseBranch
-      ? [options.baseCommit, options.baseBranch]
-      : await getBaseCommitShaAndBranch(storybookDir, commitSha, branch, options.baseBranch)
-  const prNumber = getPrNumber(options)
+    baseCommitHint && baseBranchHint
+      ? [baseCommitHint, baseBranchHint]
+      : await getBaseCommitShaAndBranch(storybookDir, commitSha, branch, baseBranchHint)
+  const prNumber = getPrNumber(options, ci)
 
   try {
     await uploadStorybook({
@@ -98,8 +104,12 @@ function getToken(options: { token?: string }) {
   return token
 }
 
-async function getCommitSha(storybookDir: string, options: { commit?: string }): Promise<string> {
-  const commitSha = options.commit
+async function getCommitSha(
+  storybookDir: string,
+  options: { commit?: string },
+  ci: CiMetadata,
+): Promise<string> {
+  const commitSha = options.commit ?? ci.commitSha
   if (commitSha) {
     return commitSha
   }
@@ -118,9 +128,14 @@ async function getCommitSha(storybookDir: string, options: { commit?: string }):
   return log.latest.hash
 }
 
-async function getBranch(storybookDir: string, options: { branch?: string }): Promise<string> {
-  if (options.branch) {
-    return options.branch
+async function getBranch(
+  storybookDir: string,
+  options: { branch?: string },
+  ci: CiMetadata,
+): Promise<string> {
+  const branch = options.branch ?? ci.branch
+  if (branch) {
+    return branch
   }
 
   const gitDir = findGitRoot(storybookDir)
@@ -203,9 +218,10 @@ function findGitRoot(dir: string): string | undefined {
   return findGitRoot(parentDir)
 }
 
-// Returns the pull request number if it is a valid number, otherwise undefined
-function getPrNumber(options: { pr?: string | number }): number | undefined {
-  const prNumber = options.pr ? parseInt(options.pr.toString()) : undefined
+// Returns the pull/merge request number if it is a valid number, otherwise undefined
+function getPrNumber(options: { pr?: string | number }, ci: CiMetadata): number | undefined {
+  const raw = options.pr ?? ci.prNumber
+  const prNumber = raw != undefined ? parseInt(raw.toString(), 10) : undefined
   if (prNumber == undefined || isNaN(prNumber) || prNumber < 1) {
     return undefined
   }
