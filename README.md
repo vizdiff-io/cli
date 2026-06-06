@@ -11,6 +11,7 @@ This CLI tool allows you to easily upload your [Storybook](https://storybook.js.
 
 - **Simple Upload:** Upload your static Storybook build directory with a single command.
 - **Git Integration:** Automatically detects the current Git commit SHA, branch name, and base commit/branch for comparison.
+- **CI Auto-Detection:** Reads predefined CI variables (e.g. GitLab CI/CD) so commit, branch, base branch/commit, and merge request number are resolved automatically inside your pipeline.
 - **Flexible Configuration:** Override detected Git information and API endpoint via command-line flags or environment variables.
 - **CI/CD Ready:** Designed for easy integration into your continuous integration pipelines.
 
@@ -69,9 +70,9 @@ You need a VizDiff **Project Token** to upload builds.
 | `--branch`              | `-b`  | -                       | Git branch name being built.                                                                              | Current branch name         |
 | `--base-branch`         |       | -                       | Base branch name for comparison (e.g., `main`, `master`).                                                 | Default repo branch         |
 | `--base-commit`         |       | -                       | Base commit SHA for comparison.                                                                           | Merge base with base branch |
-| `--pr`                  |       | -                       | GitHub Pull Request number associated with the commit (if applicable).                                    | -                           |
+| `--pr`                  |       | -                       | Pull/merge request number associated with the commit (if applicable).                                     | -                           |
 | `<storybook-build-dir>` |       | -                       | **(Required)** Path to the directory containing your static Storybook build (usually `storybook-static`). | -                           |
-| -                       |       | `VIZDIFF_API_URL`       | Override the VizDiff API endpoint.                                                                        | `https://vizdiff.io/api`    |
+| -                       |       | `VIZDIFF_API_URL`       | VizDiff API endpoint. For self-hosted deployments, point this at your ingress (e.g. `https://vizdiff.corp.example.com/api`). | `https://vizdiff.io/api`    |
 
 **Example with overrides:**
 
@@ -97,10 +98,60 @@ The CLI attempts to automatically determine the correct commit SHA, branch, and 
 
 You can override any of these automatic detections using the corresponding command-line flags if needed.
 
+### CI Environment Auto-Detection
+
+When running inside a supported CI provider, the CLI reads the provider's predefined environment variables instead of relying solely on the local `git` checkout (which on CI is often a shallow or detached clone). The resolution precedence for every metadata value is:
+
+1. **Explicit flags** (e.g. `--commit`, `--branch`, `--pr`) — always win.
+2. **CI environment variables** — used when the corresponding flag is not set.
+3. **Local `git` inference** — used as a final fallback.
+
+#### GitLab CI/CD
+
+GitLab CI/CD is detected via the `GITLAB_CI` environment variable. The following [predefined variables](https://docs.gitlab.com/ci/variables/predefined_variables/) are mapped:
+
+| Metadata    | GitLab variable(s)                                                          |
+| ----------- | -------------------------------------------------------------------------- |
+| Commit SHA  | `CI_COMMIT_SHA`                                                             |
+| Branch      | `CI_COMMIT_REF_NAME` (fallback `CI_COMMIT_BRANCH`)                          |
+| MR number   | `CI_MERGE_REQUEST_IID`                                                      |
+| Base branch | `CI_MERGE_REQUEST_TARGET_BRANCH_NAME` (fallback `CI_DEFAULT_BRANCH`)        |
+| Base commit | `CI_MERGE_REQUEST_TARGET_BRANCH_SHA` (fallback `CI_MERGE_REQUEST_DIFF_BASE_SHA`) |
+
+In a **branch (push) pipeline** only the commit, branch, and `CI_DEFAULT_BRANCH` base branch are available. In a **merge request pipeline** the `CI_MERGE_REQUEST_*` variables additionally supply the MR number and the target (base) branch and commit.
+
+### GitLab CI/CD Usage
+
+Store your VizDiff project token as a [masked CI/CD variable](https://docs.gitlab.com/ci/variables/#mask-a-cicd-variable) named `VIZDIFF_PROJECT_TOKEN`. If you run a self-hosted VizDiff deployment, also add a `VIZDIFF_API_URL` variable pointing at your ingress (e.g. `https://vizdiff.corp.example.com/api`); on vizdiff.io this can be omitted.
+
+Minimal `.gitlab-ci.yml` that builds Storybook and uploads it on both branch pushes and merge requests:
+
+```yaml
+visual-regression:
+  image: node:20
+  rules:
+    # Run on merge request pipelines and on pushes to the default branch.
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  variables:
+    # Required for self-hosted VizDiff. Omit on vizdiff.io.
+    # VIZDIFF_API_URL must point at your self-hosted ingress, e.g.:
+    VIZDIFF_API_URL: "https://vizdiff.corp.example.com/api"
+  script:
+    - npm ci
+    - npm run build-storybook # outputs to ./storybook-static
+    - npx @vizdiff/cli upload storybook-static
+    # VIZDIFF_PROJECT_TOKEN is read from a masked CI/CD variable.
+    # Commit, branch, base branch/commit, and MR number are auto-detected
+    # from the GitLab predefined variables — no extra flags needed.
+```
+
+For merge request pipelines, GitLab automatically exposes `CI_MERGE_REQUEST_IID` and the target branch/commit, so VizDiff will compare against the MR's base and associate the result with the merge request.
+
 ## How it Works
 
 1.  The CLI verifies the existence of necessary Storybook build files (`project.json`, `index.json`) in the specified directory.
-2.  It gathers Git metadata (commit, branch, etc.) unless overridden by flags.
+2.  It gathers Git metadata (commit, branch, etc.) from explicit flags, then CI predefined variables, then the local `git` checkout (in that precedence order).
 3.  The Storybook build directory is compressed into a `.tar.gz` archive.
 4.  The archive is uploaded to the VizDiff API endpoint (`/upload/storybook`) along with the project token and Git metadata.
 5.  VizDiff processes the Storybook, renders components, performs visual diffs against the base build, and reports the results back through the VizDiff web app and any configured GitHub checks.
