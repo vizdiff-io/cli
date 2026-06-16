@@ -76,9 +76,11 @@ export async function uploadStorybook(opts: UploadStorybookOpts): Promise<void> 
 
   // Create a tarball of the storybook build folder
   const tarballFilename = path.join(os.tmpdir(), `${randHexString()}.tar.gz`)
-  const error = await tar(storybookDir, tarballFilename, { compression: COMPRESSION_LEVEL.medium })
-  if (error) {
-    throw new Error(`Failed to tar+gzip storybook build folder: ${error}`)
+  // zip-a-folder v6's `tar` resolves to void and throws on failure (v3 resolved with an Error).
+  try {
+    await tar(storybookDir, tarballFilename, { compression: COMPRESSION_LEVEL.medium })
+  } catch (error) {
+    throw new Error(`Failed to tar+gzip storybook build folder: ${String(error)}`)
   }
   info(`Created storybook tarball: ${tarballFilename}`)
 
