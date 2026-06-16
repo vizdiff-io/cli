@@ -4,6 +4,11 @@
     "target": "es2022",
     "module": "commonjs",
     "moduleResolution": "node10",
+    // node10 resolution is deprecated in TS6 (hard error in TS7). This is a CommonJS CLI with
+    // extensionless relative imports, so migrating to node16/nodenext (requires .js extensions) or
+    // bundler (requires a non-CommonJS module) is out of scope for a dependency bump. Silence the
+    // deprecation until a deliberate module-resolution migration.
+    "ignoreDeprecations": "6.0",
     "lib": ["es2022"],
     "rootDir": "src",
     "outDir": "dist",

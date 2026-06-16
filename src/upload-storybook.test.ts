@@ -234,7 +234,8 @@ describe("upload-storybook", () => {
     })
 
     it("should throw if tarball creation fails", async () => {
-      vi.mocked(tar).mockResolvedValue(new Error("Compression failed"))
+      // zip-a-folder v6's `tar` throws on failure (it no longer resolves with an Error).
+      vi.mocked(tar).mockRejectedValue(new Error("Compression failed"))
       await expect(uploadStorybook(validOpts)).rejects.toThrow(
         "Failed to tar+gzip storybook build folder",
       )
