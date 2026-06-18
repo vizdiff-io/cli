@@ -45,4 +45,5 @@ jobs:
       - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # Publishing uses npm Trusted Publishing (OIDC) via the `release` environment, so no
+          # NPM_TOKEN is needed — the secret has been removed.
